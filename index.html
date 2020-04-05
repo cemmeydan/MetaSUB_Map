@@ -1,0 +1,296 @@
+<!--
+=========================================================
+* * Black Dashboard - v1.0.1
+=========================================================
+
+* Product Page: https://www.creative-tim.com/product/black-dashboard
+* Copyright 2019 Creative Tim (https://www.creative-tim.com)
+
+
+* Coded by Creative Tim
+
+=========================================================
+
+* The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+-->
+<!DOCTYPE html>
+<html lang="en">
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+    <link rel="apple-touch-icon" sizes="76x76" href="../assets/img/apple-icon.png" />
+    <link rel="icon" type="image/png" />
+    <title>
+    MetaSUB Map
+    </title>
+    <!--     Fonts and icons     -->
+    <link href="https://fonts.googleapis.com/css?family=Poppins:200,300,400,600,700,800" rel="stylesheet" />
+    <link href="https://use.fontawesome.com/releases/v5.0.6/css/all.css" rel="stylesheet" />
+    <!-- Nucleo Icons -->
+    <link href="assets/css/nucleo-icons.css" rel="stylesheet" />
+    <!-- CSS Files -->
+    <link href="assets/css/black-dashboard.css" rel="stylesheet" />
+    <link href="css/metasub.css" rel="stylesheet" />
+    <link rel="stylesheet" href="//code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css" />
+    <link href='https://api.mapbox.com/mapbox-gl-js/v1.8.1/mapbox-gl.css' rel='stylesheet' />
+  </head>
+
+  <body class="">
+    <div class="wrapper">
+      <div class="main-panel" data="blue">
+        <!-- Navbar -->
+        <nav class="navbar navbar-expand-lg navbar-absolute navbar-transparent" data="blue">
+          <div class="container-fluid">
+            <div class="navbar-wrapper">
+              <div class="navbar-toggle d-inline">
+              </div>
+              <a class="navbar-brand" href="http://metasub.org/map">
+              <img src="http://metasub.org/wp-content/uploads/2016/05/MetaSUB-Logo_white.png" style="width:100px"/>
+              <span class="d-none d-lg-inline d-xl-inline">METASUB: The Metagenomics and Metadesign of the Subways and Urban Biomes</span>
+              <span class="d-inline d-sm-none d-md-none d-lg-none d-sm-inline d-md-inline">METASUB</span>
+              </a>
+            </div>
+            
+            <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navigation" aria-expanded="false" aria-label="Toggle navigation">
+              <span class="navbar-toggler-bar navbar-kebab"></span>
+              <span class="navbar-toggler-bar navbar-kebab"></span>
+              <span class="navbar-toggler-bar navbar-kebab"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navigation">
+              <ul class="navbar-nav ml-auto">
+                <li>
+                  <div id="scrollable-dropdown-menu">
+                    <input type="text" class="typeahead" id="taxaSearchBox" placeholder="SEARCH" />
+                  </div>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </nav>
+
+
+        <div class="content" style="height: 93%;">
+          <div class="container-fluid h-100">
+            <div class="row h-100">
+              <div class="col-lg-6 perfect-scrollbar-on">
+                <div class="h-100 d-flex flex-column">
+                  <div class="row flex-grow-1" style="min-height: 600px;">
+                    <div class="col-lg-12">
+                      <div class="card card-chart" style="height: 97%;">
+                        <div class="card-header" style="padding-top: 10px;">
+                          <div class="row">
+                            <div class="col-sm-6 col-xs-6 text-left">
+                              <h4 class="card-title" id="taxa_name_placeholder">Taxa</h4>
+                            </div>
+                            <div class="col-sm-6 col-xs-6 float-right">
+                              <div class="btn-group btn-group-toggle float-right" data-toggle="buttons">
+                                <label class="btn btn-sm btn-primary btn-simple active" id="colInferno">
+                                  <input type="radio" name="options" checked />
+                                  <span class="d-none d-sm-block d-md-block d-lg-block d-xl-block">Inferno</span>
+                                  <span class="d-block d-sm-none">I</span>
+                                </label>
+                                <label class="btn btn-sm btn-primary btn-simple" id="colViridis">
+                                  <input type="radio" class="d-none d-sm-none" name="options" />
+                                  <span class="d-none d-sm-block d-md-block d-lg-block d-xl-block">Viridis</span>
+                                  <span class="d-block d-sm-none">V</span>
+                                </label>
+                                <label class="btn btn-sm btn-primary btn-simple" id="colTurbo">
+                                  <input type="radio" class="d-none" name="options" />
+                                  <span class="d-none d-sm-block d-md-block d-lg-block d-xl-block">Turbo</span>
+                                  <span class="d-block d-sm-none">T</span>
+                                </label>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                        <!-- MAP -->
+                        <div class="card-body" style="padding-top:0px; padding-bottom:5px;">
+                          <div class="chart-area" id="mapDiv">
+                          </div>
+                          <div class='map-overlay' id='mapLegend'></div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="row" style="min-height: 300px;">
+                    <div class="col-lg-12 col-md-12">
+                      <div class="card card-chart">
+                        <div class="card-header" style="padding-top:10px;" >
+                          <h5 class="card-category" id="stat_taxa_name">Relative abundance by City</h5>
+                        </div>
+                        <div class="card-body h-100" style="padding-top:0px; padding-bottom:5px;">
+                          <div class="chart-area" id="statDiv">
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="col-lg-3 perfect-scrollbar-on" style="padding-left:0px;">
+                <div class="h-100 d-flex flex-column">
+                  <div class="row flex-grow-1">
+                    <div class="col-lg-12">
+
+                      <div class="card card-chart" style="height: 97%;">
+                        <div class="card-header">
+                          <h5 class="card-category">Sample View</h5>
+                        </div>
+                        <div class="card-body">
+                          <div class="" id="sampleDiv">
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="row perfect-scrollbar-on ps" style="">
+                    <div class="col-lg-12 col-md-12">
+                      <div class="" id="taxaMetadata">
+                        <div class="card card-chart">
+                          <div class="card-header">
+                            <h5 class="card-category">Sample View</h5>
+                          </div>
+                          <div class="card-body" style="height:50%; padding-top:1px;">
+                            <div id="city_metadata" class="card-body" style="padding-top:1px;">
+                              <h4 id="city_name_header" style="padding-bottom:1px;">Hover or click on a sample</h4>
+                              <div class="table-responsive ps" id="city_metadata_div" style="display:block;">
+                                <table class="table " id="city_metadata_table" style="font-size:x-small;">
+                                  <tbody>
+                                    <tr><td>Sample Id</td><td id="city_metadata_sample_name"></td></tr>
+                                    <tr><td>Project</td><td id="city_metadata_project"></td></tr>
+                                    <tr><td>Line</td><td id="city_metadata_line"></td></tr>
+                                    <tr><td>Location type</td><td id="city_metadata_location_type"></td></tr>
+                                    <tr><td>Surface</td><td id="city_metadata_surface"></td></tr>
+                                    <tr><td>Material</td><td id="city_metadata_material"></td></tr>
+                                    <tr><td># of reads</td><td id="city_metadata_numreads"></td></tr>
+                                    <tr><td>City Population</td><td id="city_metadata_citypopulation"></td></tr>
+                                    <tr><td>City Elevation</td><td id="city_metadata_cityelevation"></td></tr>
+                                  </tbody>
+                                </table>
+                              </div>
+                            </div>
+
+
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="col-lg-3 card_scroll" style="height:100%;">
+                <div class="row h-100">
+                  <div class="card card-chart">
+                    <div class="card-header">
+                      <h5 class="card-category">Taxa Metadata</h5>
+                    </div>
+                    <div class="card-body" style="padding-top:1px;">
+                      <div class="" id="taxaMetadata">
+                        <h5 id="sunburst_taxon_name_header" style="padding-left:10px; margin-bottom:1px;">&nbsp;</h5>
+                        <div class="table-responsive ps" id="sunburst_taxa_metadata_div" style="display:block;">
+                          <table class="table" id="sunburst_taxa_metadata_table" style="font-size:x-small; width:100%;">
+                            <tbody>
+                              <tr class="sunburts_abundance_row"></tr>
+                              <tr id="sunburst_taxon_gram_row" class="sunburts_taxon_row">
+                                <td class="td_meta_key">Abundance</td><td class="td_meta_val" id="sunburst_taxon_relative_abundance"></td>
+                                <td class="td_meta_key">Gram-stain</td><td class="td_meta_val">
+                                  <span id="sunburst_taxon_gram_negative" class="taxa-legend-key" style="background-color: #b39a7f;">-</span>
+                                  <span id="sunburst_taxon_gram_positive" class="taxa-legend-key" style="background-color: #7fb399;">+</span>
+                                </td>
+                              </tr>
+                              <tr id="sunburst_taxon_biofilm_row" class="sunburts_taxon_row">
+                                <td class="td_meta_key">Biofilm forming</td><td class="td_meta_val">
+                                  <span id="sunburst_taxon_biofilm_n" class="taxa-legend-key" style="background-color: #b39a7f;">N</span>
+                                  <span id="sunburst_taxon_biofilm_y" class="taxa-legend-key" style="background-color: #7fb399;">Y</span>
+                                </td>
+                                <td class="td_meta_key">Spore forming</td><td class="td_meta_val">
+                                  <span id="sunburst_taxon_spore_n" class="taxa-legend-key" style="background-color: #b39a7f;">N</span>
+                                  <span id="sunburst_taxon_spore_y" class="taxa-legend-key" style="background-color: #7fb399;">Y</span>
+                                </td>
+                              </tr>
+                              <tr id="sunburst_taxon_extremophile_row" class="sunburts_taxon_row">
+                                <td class="td_meta_key">Extremophile </td><td class="td_meta_val">
+                                  <span id="sunburst_taxon_extremophile_n" class="taxa-legend-key" style="background-color: #b39a7f;">N</span>
+                                  <span id="sunburst_taxon_extremophile_y" class="taxa-legend-key" style="background-color: #7fb399;">Y</span>
+                                </td>
+                                <td class="td_meta_key">Anti-microbial susceptible</td><td class="td_meta_val">
+                                  <span id="sunburst_taxon_antimicrobial_n" class="taxa-legend-key" style="background-color: #b39a7f;">N</span>
+                                  <span id="sunburst_taxon_antimicrobial_y" class="taxa-legend-key" style="background-color: #7fb399;">Y</span>
+                                </td>
+                              </tr>
+                              <tr id="sunburst_taxon_animal_pathogen_row" class="sunburts_taxon_row">
+                                <td class="td_meta_key">Animal pathogen</td><td class="td_meta_val">
+                                  <span id="sunburst_taxon_animal_pathogen_n" class="taxa-legend-key" style="background-color: #b39a7f;">N</span>
+                                  <span id="sunburst_taxon_animal_pathogen_y" class="taxa-legend-key" style="background-color: #7fb399;">Y</span>
+                                </td>
+                                <td class="td_meta_key">Plant pathogen</td><td class="td_meta_val">
+                                  <span id="sunburst_taxon_plant_pathogen_n" class="taxa-legend-key" style="background-color: #b39a7f;">N</span>
+                                  <span id="sunburst_taxon_plant_pathogen_y" class="taxa-legend-key" style="background-color: #7fb399;">Y</span>
+                                </td>
+                              </tr>
+                              <tr id="sunburst_taxon_pathogenicity_row" class="sunburts_taxon_row">
+                                  <td class="td_meta_key">Pathogenicity</td><td colspan="3">
+                                  <span id="sunburst_taxon_pathogenicity_1" class="taxa-legend-key" style="background-color: #d9ef8b;color:black;">1</span>
+                                  <span id="sunburst_taxon_pathogenicity_2" class="taxa-legend-key" style="background-color: #fee08b;color:black;">2</span>
+                                  <span id="sunburst_taxon_pathogenicity_3" class="taxa-legend-key" style="background-color: #f46d43;color:black;">3</span>
+                                </td></tr>
+
+                            </tbody>
+                          </table>
+                        </div>
+
+
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <footer class="footer">
+          <div class="container-fluid">
+            <ul class="nav">
+              <li class="nav-item">
+                <a href="https://www.biorxiv.org/content/10.1101/724526v1" target="_blank" class="nav-link">
+                Paper by Danko et al.
+                </a>
+              </li>
+              <li class="nav-item">
+                <a href="http://metasub.org"  target="_blank" class="nav-link">
+                MetaSUB Consortium
+                </a>
+              </li>
+            </ul>
+            <div class="copyright">
+              <a href="http://masonlab.net" target="_blank">Mason Lab</a> and <a href="http://metasub.org" target="_blank">MetaSUB consortium</a>.
+            </div>
+          </div>
+        </footer>
+      </div>
+    </div>
+
+    <!--   Core JS Files   -->
+    <script src="assets/js/core/jquery.min.js"></script>
+    <script src="js/jquery-ui.js"></script>
+    <script src='js/mapbox-gl.js'></script>
+    <script src='js/plotly-latest.min.js'></script>
+    <script src="js/typeahead.bundle.js"></script>
+    <script src='js/d3.min.js'></script>
+    <script src="js/metasub_helper.js"></script>
+    <script src="js/metasub.js"></script>
+    <script src="js/sunburst-chart.min.js"></script>
+
+    <script src="assets/js/core/popper.min.js"></script>
+    <script src="assets/js/core/bootstrap.min.js"></script>
+    <script src="assets/js/plugins/perfect-scrollbar.jquery.min.js"></script>
+    <!-- Chart JS -->
+    <script src="assets/js/plugins/chartjs.min.js"></script>
+    <!--  Notifications Plugin    -->
+    <script src="assets/js/plugins/bootstrap-notify.js"></script>
+    <!-- Control Center for Black Dashboard: parallax effects, scripts for the example pages etc -->
+    <script src="assets/js/black-dashboard.min.js?v=1.0.0"></script>
+  </body>
+
+</html>
