@@ -1,9 +1,33 @@
-// TODO: Need to add attributions & license
+/* 
+Copyright 2020 Cem Meydan & Mason Lab
 
-var taxa_api_url = "https://pangea.gimmebio.com/api/contrib/taxasearch/search?format=json&metadata=true"
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
 
-// TODO: Link sample API to city onclick for sunburst plot
-var sample_api_url = ""
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+
+
+All data, software and library dependencies are used under their respective licenses
+- Data by: MetaSUB, http://metasub.org
+- Data backend by: David Danko / Pangea, https://pangea.gimmebio.com/
+- Microbe annotation by: TOGOgenome, https://togogenome.org
+- Microbe annotation by: MicrobeDB, https://microbedb.jp/
+- Microbe annotation by: MicrobeDirectory, https://microbe.directory
+- Map tiles supplied by: Stamen design, https://stamen.com/
+- Map data supplied by: OpenStreetMap, OpenStreetMap
+- Map by: MapBox, https://www.mapbox.com/
+- Boxplot by: Plot.ly, https://plotly.com/
+- Theme by: Creative Tim, https://www.creative-tim.com/product/black-dashboard
+- Autocomplete by: Typeahead and Bloodhound, https://twitter.github.io/typeahead.js/
+- Sunburst by: Vasco Asturiano, https://github.com/vasturiano/sunburst-chart
+*/
+
+
+var taxaApiUrl = "https://pangea.gimmebio.com/api/contrib/taxasearch/search?format=json&metadata=true&query={TAXA}"
+var sampleApiUrl = "https://pangea.gimmebio.com/api/nested/MetaSUB%20Consortium/sample_groups/MetaSUB/samples/{SAMPLE}/analysis_results/krakenuniq_taxonomy/fields/relative_abundance?format=json"
+
 var sampleData = DownloadJson("data/testsample.json");
 
 
@@ -18,7 +42,6 @@ var colorList = colorListInferno;
 // TODO: encapsulate instead of global vars
 // TODO: Download files asynchronously and synchronize other initialization steps
 
-// TODO: get taxa list from endpoint instead of static json
 var taxaList = DownloadJson("data/taxalist.json");
 var taxaListSpecies = taxaList.filter(function (x) { return x.rank == "species"});
 var cityList = DownloadJson("data/cities.json");
@@ -46,8 +69,8 @@ var mapSampleMarkerPresent = false;
 var mapCurrentSampleGeojson;
 var mapSampleMarker;
 var hoveredStateId;
-var taxa_json;
-var current_taxa_name;
+var taxaJson;
+var currentTaxaName;
 
 
 
@@ -89,25 +112,27 @@ map.on('load', function()
 	map.resize();
 	
 	map.fitBounds([[-175, -50], [175, 60]]); // Fit all sampling cities
-	var taxaName = "cutibacterium granulosum";
+	var taxaName = "Cutibacterium granulosum";
 	PlotTaxa(taxaName);
+	RevertTaxonMetadata();
 	
 
 	$("#colInferno").click(function() {
       colorList = colorListInferno;
-	  if(taxa_json != null) PlotHeatmapTaxaMapbox(taxa_json);
+	  if(taxaJson != null) PlotHeatmapTaxaMapbox(taxaJson);
     });
     $("#colViridis").click(function() {
       colorList = colorListViridis;
-      if(taxa_json != null) PlotHeatmapTaxaMapbox(taxa_json);
+      if(taxaJson != null) PlotHeatmapTaxaMapbox(taxaJson);
     });
 
     $("#colTurbo").click(function() {
       colorList = colorListTurbo;
-      if(taxa_json != null) PlotHeatmapTaxaMapbox(taxa_json);
+      if(taxaJson != null) PlotHeatmapTaxaMapbox(taxaJson);
     });
 	
 	map.resize();
+	PlotSunburst(sampleData);
 });
 
 
@@ -246,13 +271,13 @@ function MainPageSetup()
 
 
 
-function GetTaxaMap(taxa_name)
+function GetTaxaMap(taxaName)
 {
-	var taxa_search_url = taxa_api_url + "&query=" + taxa_name;
-	data = DownloadJson(taxa_search_url);
-	cur_taxa_name = Object.keys(data.results)[0];
-	cur_taxa_data = data.results[cur_taxa_name];
-	return {taxa_data: cur_taxa_data, taxa_name: cur_taxa_name };
+	var taxaSearchUrl = taxaApiUrl.replace("{TAXA}", taxaName);
+	data = DownloadJson(taxaSearchUrl);
+	curTaxaName = Object.keys(data.results)[0];
+	curTaxaData = data.results[curTaxaName];
+	return {taxa_data: curTaxaData, taxa_name: curTaxaName };
 }
 
 
@@ -269,19 +294,19 @@ function removeMapboxSource(source_id)
 	if( source_id in map.getStyle().sources) map.removeSource(source_id);
 }
 
-function PlotHeatmapTaxa(taxa_name)
+function PlotHeatmapTaxa(taxaName)
 {
-	var taxa_json = GetTaxaMap(taxa_name)
-	var cur_taxa_data = taxa_json['taxa_data'];
-	var cur_taxa_name = taxa_json['taxa_name'];
+	var taxaJson = GetTaxaMap(taxaName)
+	var curTaxaData = taxaJson['taxa_data'];
+	var curTaxaName = taxaJson['taxa_name'];
 
 	var data = [
 		{
 			type: "densitymapbox",
-			text: unpack(cur_taxa_data, "sample_name"),
-			lon: unpack_metadata(cur_taxa_data, "longitude"),
-			lat: unpack_metadata(cur_taxa_data, "latitude"),
-			z: unpack(cur_taxa_data, "relative_abundance"),
+			text: unpack(curTaxaData, "sample_name"),
+			lon: unpack_metadata(curTaxaData, "longitude"),
+			lat: unpack_metadata(curTaxaData, "latitude"),
+			z: unpack(curTaxaData, "relative_abundance"),
 			marker: { color: "fuchsia", size: 5 },
 			coloraxis: 'coloraxis',
 			hoverinfo: 'skip',
@@ -289,9 +314,9 @@ function PlotHeatmapTaxa(taxa_name)
 		},
 		{
 			type: "scattermapbox",
-			text: unpack(cur_taxa_data, "sample_name"),
-			lon: unpack_metadata(cur_taxa_data, "longitude"),
-			lat: unpack_metadata(cur_taxa_data, "latitude"),
+			text: unpack(curTaxaData, "sample_name"),
+			lon: unpack_metadata(curTaxaData, "longitude"),
+			lat: unpack_metadata(curTaxaData, "latitude"),
 			marker: { color: "#620573", size: 10 },
 		}
 	];
@@ -310,7 +335,7 @@ function PlotHeatmapTaxa(taxa_name)
 
 	pl = Plotly.newPlot("mapDiv", data, layout, config);
 		
-	$("#taxa_name_placeholder").text(cur_taxa_name);
+	$("#taxa_name_placeholder").text(curTaxaName);
 }
 
 
@@ -510,6 +535,8 @@ function PlotHeatmapTaxaMapbox(taxaData)
 	map.on('click', 'taxaBySample-pointHeat', function(e) 
 	{
 		map.flyTo({ center: e.features[0].geometry.coordinates, zoom: Math.max(map.getZoom(), 9) });
+		
+		ShowCitySunburst(e.features[0]);
 		ShowCityMetadata(e.features[0]);
 		
 		var el = document.createElement('div');
@@ -582,6 +609,12 @@ function PlotHeatmapTaxaMapbox(taxaData)
 	map.resize();
 }
 
+function ShowCitySunburst(geojson)
+{
+	var sampleDataUrl = sampleApiUrl.replace("{SAMPLE}", geojson.properties.sample_id);
+	var sampleData = DownloadJson(sampleDataUrl);
+	PlotSunburst(sampleData.stored_data);
+}
 
 
 function ShowCityMetadata(geojson)
@@ -768,25 +801,25 @@ function SetupTaxaSearchAutocomplete()
 			map.flyTo({ center: [datum.longitude, datum.latitude], zoom: 9 });
 		}else if("taxon" in datum) // Taxon
 		{
-			current_taxa_name = datum.name;
+			currentTaxaName = datum.name;
 			PlotTaxa(datum.name);
 		}
 	});
 }
 
-function PlotTaxa(taxa_name)
+function PlotTaxa(taxaName)
 {
-	taxa_json = GetTaxaMap(taxa_name)
-	var cur_taxa_data = taxa_json['taxa_data'];
-	var cur_taxa_name = taxa_json['taxa_name'];
+	currentTaxaName = taxaName;
+	RevertTaxonMetadata();
 	
-	$("#taxon_name_header").text(cur_taxa_name);
+	taxaJson = GetTaxaMap(taxaName)
+	var curTaxaData = taxaJson['taxa_data'];
+	var curTaxaName = taxaJson['taxa_name'];
 	
-	PlotHeatmapTaxaMapbox(taxa_json);
-	PlotBoxplot(taxa_json);
+	$("#taxon_name_header").text(curTaxaName);
 	
-	// TODO: instead of sampleData use real city data based on last clicked city/sample
-	PlotSunburst(sampleData);
+	PlotHeatmapTaxaMapbox(taxaJson);
+	PlotBoxplot(taxaJson);
 	
 	// TODO: highlight selected taxa in the sunburst plot.
 	// TODO: show metadata for selected taxa in the sidebar
@@ -852,6 +885,7 @@ function buildHierarchy(sampleData)
       var nodeName = partsSplit[1].replace("_", " ");
 	  var nodeNameOrg = nodeName;
 	  var nodeNameSplit = nodeName.split(" ")
+	  if(nodeName == "Unknown") nodeName = "";
 	  if(nodeNameOrg in taxaNameToTaxId) taxId = taxaNameToTaxId[nodeNameOrg]; else taxId = -1;
 	  
 	  if( partsSplit[0] == "8"  && nodeNameSplit.length > 1) // In species shorten the genera name to fit in sunburst
@@ -920,30 +954,31 @@ function PlotSunburst(sampleData)
 
 function SunburstHover(node)
 {
-	if(node != null) ShowTaxonMetadata(node); //else HideTaxonMetadata(node);
+	if(node != null) ShowTaxonNodeMetadata(node); else RevertTaxonMetadata();
 }
 
 function HighlightTaxonMetadata(spanId)
 {
 	$('#' + spanId).css("opacity", "1");
 	$('#' + spanId).css("border-color", "#f5b400");
-	//$('#' + spanId).css("outline-width", "2px");
-	
 }
 
-// TODO: fix metadata section, too ad hoc and messy right now.
-// maybe structure in the metadata fields and a mapping description file?
-function ShowTaxonMetadata(node)
+function ShowTaxonNodeMetadata(node)
 {
 	HideTaxonMetadata();
 	$('#sunburst_taxon_name_header').text(node.name_original);
 	$('#sunburst_taxon_relative_abundance').text( (node.__dataNode.value * 100).toPrecision(3) + "%");
 	
-	if(node.taxid != null)
+	ShowTaxonMetadata(node.taxid);
+}	
+
+function ShowTaxonMetadata(taxid)
+{
+	if(taxid != null)
 	{
-		if(node.taxid in microbeDirectory)
+		if(taxid in microbeDirectory)
 		{
-			curAnn = microbeDirectory[node.taxid];
+			curAnn = microbeDirectory[taxid];
 			
 			
 			if('optimal_temperature' in curAnn)
@@ -998,9 +1033,9 @@ function ShowTaxonMetadata(node)
 		var taxaMetadataRow;
 		
 		
-		if(node.taxid in togo_mpo)
+		if(taxid in togo_mpo)
 		{
-			mpoAnn = togo_mpo[node.taxid];
+			mpoAnn = togo_mpo[taxid];
 			for(curAnn in mpoAnn) 
 			{ 
 				if(curAnn == "species_taxid" || curAnn == "species_name" ) continue; // Skip features
@@ -1040,9 +1075,9 @@ function ShowTaxonMetadata(node)
 			
 		}
 		curAnnCt = 0
-		if(node.taxid in togo_meo)
+		if(taxid in togo_meo)
 		{
-			mpoAnn = togo_meo[node.taxid];
+			mpoAnn = togo_meo[taxid];
 			for(curAnn in mpoAnn) 
 			{ 
 				if(curAnn == "species_taxid" || curAnn == "species_name" ) continue;
@@ -1072,9 +1107,9 @@ function ShowTaxonMetadata(node)
 				curAnnCt++;
 			}
 		}
-		if(node.taxid in togo_pdo)
+		if(taxid in togo_pdo)
 		{
-			pdoAnn = togo_pdo[node.taxid];
+			pdoAnn = togo_pdo[taxid];
 			taxaMetadataRow = taxaMetadataTable.insertRow(taxaMetadataTable.rows.length);
 			taxaMetadataRow.className = "sunburst_taxon_temp_row";
 			createCell(taxaMetadataRow.insertCell(-1), 'td_meta_key', "Infectious strains", ""); 
@@ -1084,8 +1119,18 @@ function ShowTaxonMetadata(node)
 	
 	}
 }
+function RevertTaxonMetadata()
+{
+	HideTaxonMetadata();
+	$('#sunburst_taxon_name_header').text(currentTaxaName);
+	if(currentTaxaName in taxaNameToTaxId)
+	{
+		taxId = taxaNameToTaxId[currentTaxaName];
+		ShowTaxonMetadata(taxId);
+	}
+}
 
-function HideTaxonMetadata(node)
+function HideTaxonMetadata()
 {
 	$('#sunburst_taxon_name_header').text(String.fromCharCode(160));
 	$('#sunburst_taxon_relative_abundance').text("");
