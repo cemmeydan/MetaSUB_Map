@@ -24,8 +24,8 @@ All data, software and library dependencies are used under their respective lice
 - Sunburst by: Vasco Asturiano, https://github.com/vasturiano/sunburst-chart
 */
 
-
-var taxaApiUrl = "https://pangea.gimmebio.com/api/contrib/taxasearch/search?format=json&metadata=true&query={TAXA}"
+var metadataApiUrl = "https://pangeabio.io/api/sample_groups/67e6b646-422e-4f61-9e9e-dac32caf23ba/metadata"
+var taxaApiUrl = "https://pangeabio.io/api/contrib/metasub/search_samples?format=json&query={TAXA}&metadata=true&all_samples=true"
 var sampleApiUrl = "https://pangea.gimmebio.com/api/nested/MetaSUB%20Consortium/sample_groups/MetaSUB/samples/{SAMPLE}/analysis_results/krakenuniq_taxonomy/fields/relative_abundance?format=json"
 
 var sampleData = DownloadJson("data/testsample.json");
@@ -42,6 +42,8 @@ var colorList = colorListInferno;
 // TODO: encapsulate instead of global vars
 // TODO: Download files asynchronously and synchronize other initialization steps
 
+
+//var cachedCgranulosum = DownloadJson("data/Cutibacterium_granulosum.json");
 var taxaList = DownloadJson("data/taxalist.json");
 var taxaListSpecies = taxaList.filter(function (x) { return x.rank == "species"});
 var cityList = DownloadJson("data/cities.json");
@@ -49,11 +51,11 @@ var cityList = DownloadJson("data/cities.json");
 var microbeDirectory = DownloadJson("data/microbe_directory_taxid.json");
 microbeDirectory = microbeDirectory.reduce(function(map, obj) {map[obj.tax_id] = obj;  return map;}, {});
 
-var cityToContinent = cityList.reduce(function(map, obj) {map[obj.city_name] = obj.continent;  return map;}, {});
-var cityToColorGroup = cityList.reduce(function(map, obj) {map[obj.city_name] = obj.colorGroup;  return map;}, {});
+var cityToContinent = cityList.reduce(function(map, obj) {map[obj.city_id] = obj.continent;  return map;}, {});
+var cityToColorGroup = cityList.reduce(function(map, obj) {map[obj.city_id] = obj.colorGroup;  return map;}, {});
 var taxaNameToTaxonomy = taxaList.reduce(function(map, obj) {map[obj.name] = obj.taxon;  return map;}, {});
 var taxaNameToTaxId = taxaList.reduce(function(map, obj) {map[obj.name] = obj.taxid;  return map;}, {});
-var cityIdToMetadata = cityList.reduce(function(map, obj) {map[obj.city_name] = obj;  return map;}, {});
+var cityIdToMetadata = cityList.reduce(function(map, obj) {map[obj.city_id] = obj;  return map;}, {});
 
 var togo_pdo = DownloadJson("data/togo_pdo.json");
 togo_pdo = togo_pdo.reduce(function(map, obj) {map[obj.species_taxid] = obj;  return map;}, {});
@@ -106,14 +108,13 @@ var map = new mapboxgl.Map({
 	},
 });
 
-
 map.on('load', function() 
 {
 	map.resize();
 	
-	map.fitBounds([[-175, -50], [175, 60]]); // Fit all sampling cities
+	map.fitBounds([[-175, -50], [185, 60]]); // Fit all sampling cities
 	var taxaName = "Cutibacterium granulosum";
-	PlotTaxa(taxaName);
+	PlotTaxa(taxaName, cache = true);
 	RevertTaxonMetadata();
 	
 
@@ -132,8 +133,12 @@ map.on('load', function()
     });
 	
 	map.resize();
+	
 	PlotSunburst(sampleData);
 });
+
+var mapbox_canvas = document.querySelector('.mapboxgl-canvas');
+mapbox_canvas.style.position = "relative";
 
 
 window.onresize = function()
@@ -151,7 +156,75 @@ $(document).ready(function()
 {
 	MainPageSetup();
 	SetupTaxaSearchAutocomplete();
+	ShowGuide(false);
 });
+
+
+var introguide = introJs();
+
+introguide.setOptions({
+  steps: [
+  {
+    title: 'Welcome',
+    intro: 'Welcome to MetaSUB Map, The Metagenomics and Metadesign of the Subways and Urban Biomes.<br/>We recommend using <b>Chrome Desktop</b> for the optimal experience.'
+  },
+  {
+    title: 'Search',
+    intro: 'Type in the search box to see results for any taxa, or focus on a city.',
+	element: document.querySelector('#taxaSearchBox')
+  },
+  {
+    title: 'Map',
+    intro: 'Heatmap colors show relative abundance of the taxa for a location. Click on a point to zoom in and show taxonomic profile of that location.',
+	element: document.querySelector('#mapDiv')
+  },
+  {
+    title: 'Sunburst',
+    intro: 'Sunburst shows the relative abundance of each taxa for a sample. Click on a sample in map view to change which sample is visualized. Hover over a taxa to show taxa specific metadata. Click to zoom in, click the center to zoom out.',
+	element: document.querySelector('#sampleDiv')
+  },
+  {
+    title: 'Sample metadata',
+    intro: 'Click or hover over a sample in the map view to see the associated metadata.',
+	element: document.querySelector('#city_metadata')
+  },
+  {
+    title: 'Taxa metadata',
+    intro: 'Hover over a taxa in the sunburst view, or search for a taxa in the search box to see associated metadata about a taxa.',
+	element: document.querySelector('#sunburst_taxa_metadata_div')
+  },
+  {
+    title: 'Taxa boxplot',
+    intro: 'Boxplots show the relative abundance for samples taken from a city. Hover over the boxes to get statistics, or use the icons on the top right to zoom in.',
+	element: document.querySelector('#statDiv')
+  }
+  ]
+})
+
+
+ShowGuide = function(force = true)
+{
+	var doneTour = localStorage.getItem('EventTour') === 'Completed';
+    if (doneTour && force == false) 
+	{
+        return;
+    }
+    else 
+	{
+        introguide.start()
+	
+        introguide.oncomplete(function () {
+            localStorage.setItem('EventTour', 'Completed');
+        });
+	
+        introguide.onexit(function () {
+            localStorage.setItem('EventTour', 'Completed');
+        });
+    }
+}
+
+var helpLink = document.querySelector('#showHelp');
+helpLink.onclick = ShowGuide;
 
 
 // Bootstrap theme setup.
@@ -271,13 +344,25 @@ function MainPageSetup()
 
 
 
-function GetTaxaMap(taxaName)
+async function GetTaxaMap(taxaName, cache = false)
 {
-	var taxaSearchUrl = taxaApiUrl.replace("{TAXA}", taxaName);
-	data = DownloadJson(taxaSearchUrl);
-	curTaxaName = Object.keys(data.results)[0];
-	curTaxaData = data.results[curTaxaName];
-	return {taxa_data: curTaxaData, taxa_name: curTaxaName };
+	var taxaSearchUrl = ""
+	if(cache == true & taxaName == "Cutibacterium granulosum")
+	{
+		taxaSearchUrl = "data/Cutibacterium_granulosum.json"
+	} else
+	{
+		taxaSearchUrl = taxaApiUrl.replace("{TAXA}", taxaName);
+	}
+	
+	var result = DownloadJsonAsync(taxaSearchUrl).then(data => {
+			curTaxaName = Object.keys(data.results)[0];
+			curTaxaData = data.results[curTaxaName];
+			return {taxa_data: curTaxaData, taxa_name: curTaxaName };
+		});
+	
+	
+	return result;	
 }
 
 
@@ -293,53 +378,6 @@ function removeMapboxSource(source_id)
 {
 	if( source_id in map.getStyle().sources) map.removeSource(source_id);
 }
-
-function PlotHeatmapTaxa(taxaName)
-{
-	var taxaJson = GetTaxaMap(taxaName)
-	var curTaxaData = taxaJson['taxa_data'];
-	var curTaxaName = taxaJson['taxa_name'];
-
-	var data = [
-		{
-			type: "densitymapbox",
-			text: unpack(curTaxaData, "sample_name"),
-			lon: unpack_metadata(curTaxaData, "longitude"),
-			lat: unpack_metadata(curTaxaData, "latitude"),
-			z: unpack(curTaxaData, "relative_abundance"),
-			marker: { color: "fuchsia", size: 5 },
-			coloraxis: 'coloraxis',
-			hoverinfo: 'skip',
-			radius: 30
-		},
-		{
-			type: "scattermapbox",
-			text: unpack(curTaxaData, "sample_name"),
-			lon: unpack_metadata(curTaxaData, "longitude"),
-			lat: unpack_metadata(curTaxaData, "latitude"),
-			marker: { color: "#620573", size: 10 },
-		}
-	];
-
-	var layout = {
-		dragmode: "zoom",
-		mapbox: { 
-			style: "stamen-toner", 
-			center: { lat: 0, lon: 20 }, zoom: 1
-		},
-		margin: { r: 0, t: 0, b: 0, l: 0 },
-		coloraxis: {colorscale: "Viridis"},
-	};
-
-	var config = {"responsive": true, "displayModeBar": false, "displaylogo": false, "modeBarButtonsToRemove": ['sendDataToCloud', 'editInChartStudio', 'zoom2d', 'pan2d', 'select2d', 'lasso2d', 'hoverClosestCartesian', 'hoverCompareCartesian', 'toggleSpikelines']};
-
-	pl = Plotly.newPlot("mapDiv", data, layout, config);
-		
-	$("#taxa_name_placeholder").text(curTaxaName);
-}
-
-
-
 
 function PlotHeatmapTaxaMapbox(taxaData)
 {
@@ -492,7 +530,15 @@ function PlotHeatmapTaxaMapbox(taxaData)
 			15,
 			['case',['boolean', ['feature-state', 'hover'], false],	0,	1]
 		  ],
-		  'circle-opacity': 1,
+		  'circle-opacity': [
+			'interpolate',
+			['linear'],
+			['get', 'ab'],
+			0,
+			0.0001,
+			10,
+			1
+		  ],
 		  'circle-stroke-color': '#fad400',
 		  'circle-stroke-width': ['case',['boolean', ['feature-state', 'hover'], false], 3,	0],
 		}
@@ -511,9 +557,9 @@ function PlotHeatmapTaxaMapbox(taxaData)
 					['linear'],
 					['zoom'],
 					10,
-					['interpolate', ['linear'], ['get', 'ab'], 1, 5, 10, 30],
+					['interpolate', ['linear'], ['get', 'ab'], 1, 5, 10, 20],
 					16,
-					['interpolate', ['linear'], ['get', 'ab'], 1, 10, 10, 100]
+					['interpolate', ['linear'], ['get', 'ab'], 1, 10, 10, 50]
 				],
 				'circle-color': circleColor,
 				'circle-stroke-color': '#000000',
@@ -530,8 +576,7 @@ function PlotHeatmapTaxaMapbox(taxaData)
 			}
 		}
 	);
-
-	
+		
 	map.on('click', 'taxaBySample-pointHeat', function(e) 
 	{
 		map.flyTo({ center: e.features[0].geometry.coordinates, zoom: Math.max(map.getZoom(), 9) });
@@ -612,10 +657,14 @@ function PlotHeatmapTaxaMapbox(taxaData)
 function ShowCitySunburst(geojson)
 {
 	var sampleDataUrl = sampleApiUrl.replace("{SAMPLE}", geojson.properties.sample_id);
-	var sampleData = DownloadJson(sampleDataUrl);
-	PlotSunburst(sampleData.stored_data);
+	loader_sun = document.querySelector('#sun_loading');
+	loader_sun.style.display = "block";
+	$("#sampleDiv").html("");
+	DownloadJsonAsync(sampleDataUrl).then(sampleData => {
+		PlotSunburst(sampleData.stored_data);
+		loader_sun.style.display = "none";
+	});
 }
-
 
 function ShowCityMetadata(geojson)
 {
@@ -632,9 +681,6 @@ function ShowCityMetadata(geojson)
 	$('#city_metadata_cityelevation').text(cityIdToMetadata[geojson.properties.city].city_elevation_meters + "m");
 }	
 
-
-
-
 function PlotBoxplot(taxaData)
 {
 	// Get data and sort by continent & city
@@ -643,7 +689,13 @@ function PlotBoxplot(taxaData)
 
 	// Setup city colors
 	var curCities = getUnique(boxData.map(x => x.city));
-	var curColors = getUnique(cityList.map(x => x.colorGroup));
+	var cityOrder = {}
+	curCities.map(x => {cityOrder[x] = cityToColorGroup[x] + "_" + cityToContinent[x]})
+	//cityOrder = sortObject(cityOrder)
+	//curCities = Object.keys(cityOrder)
+	curCities = sortKeysByValue(cityOrder)
+	
+	var curColors = getUnique(cityList.map(x => x.colorGroup)).sort();
 	var boxColor = {};
 	var allColors = linspace(0, 360, curColors.length);
 
@@ -807,20 +859,30 @@ function SetupTaxaSearchAutocomplete()
 	});
 }
 
-function PlotTaxa(taxaName)
+function PlotTaxa(taxaName, cache = false)
 {
 	currentTaxaName = taxaName;
 	RevertTaxonMetadata();
 	
-	taxaJson = GetTaxaMap(taxaName)
-	var curTaxaData = taxaJson['taxa_data'];
-	var curTaxaName = taxaJson['taxa_name'];
 	
-	$("#taxon_name_header").text(curTaxaName);
+	loader_map = document.querySelector('#map_loading');
+	loader_stat = document.querySelector('#stat_loading');
 	
-	PlotHeatmapTaxaMapbox(taxaJson);
-	PlotBoxplot(taxaJson);
-	
+	loader_map.style.display = 'block';
+	loader_stat.style.display = 'block';
+	GetTaxaMap(taxaName, cache).then(taxaJsonDat => 
+	{
+		taxaJson = taxaJsonDat;
+		var curTaxaData = taxaJson['taxa_data'];
+		var curTaxaName = taxaJson['taxa_name'];
+		
+		$("#taxon_name_header").text(curTaxaName);
+		
+		PlotHeatmapTaxaMapbox(taxaJson);
+		PlotBoxplot(taxaJson);
+		loader_map.style.display = 'none';
+		loader_stat.style.display = 'none';
+	});
 	// TODO: highlight selected taxa in the sunburst plot.
 	// TODO: show metadata for selected taxa in the sidebar
 }
@@ -932,6 +994,7 @@ function PlotSunburst(sampleData)
 	var divElement = document.getElementById("sampleDiv");
 	var sunburstSize = Math.max(200, divElement.offsetWidth*0.9);
 	var sunburstData = buildHierarchy(sampleData);
+		
 	const color = d3.scaleOrdinal(d3.schemePaired);
 	
 	const sampleSunburst = Sunburst();
@@ -1119,6 +1182,7 @@ function ShowTaxonMetadata(taxid)
 	
 	}
 }
+
 function RevertTaxonMetadata()
 {
 	HideTaxonMetadata();

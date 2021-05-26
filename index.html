@@ -50,6 +50,7 @@ All data, software and library dependencies are used under their respective lice
     MetaSUB Map
     </title>
     <!--     Fonts and icons     -->
+    <link rel="icon" type="image/png" href="http://metasub.org/wp-content/uploads/2016/06/favicon-01.png">
     <link href="https://fonts.googleapis.com/css?family=Poppins:200,300,400,600,700,800" rel="stylesheet" />
     <link href="https://use.fontawesome.com/releases/v5.0.6/css/all.css" rel="stylesheet" />
     <!-- Nucleo Icons -->
@@ -57,6 +58,7 @@ All data, software and library dependencies are used under their respective lice
     <!-- CSS Files -->
     <link href="assets/css/black-dashboard.css" rel="stylesheet" />
     <link href="css/metasub.css" rel="stylesheet" />
+	<link href="css/introjs.min.css" rel="stylesheet" />
     <link rel="stylesheet" href="//code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css" />
     <link href='https://api.mapbox.com/mapbox-gl-js/v1.8.1/mapbox-gl.css' rel='stylesheet' />
   </head>
@@ -105,10 +107,13 @@ All data, software and library dependencies are used under their respective lice
                       <div class="card card-chart" style="height: 97%;">
                         <div class="card-header" style="padding-top: 10px;">
                           <div class="row">
-                            <div class="col-sm-6 col-xs-6 text-left">
+                            <div class="col-sm-4 col-xs-4 text-left">
                               <h4 class="card-title" id="taxa_name_placeholder">Taxa</h4>
                             </div>
-                            <div class="col-sm-6 col-xs-6 float-right">
+							<div class="col-sm-4 col-xs-4 text-left">
+								<img src="css/spinner.gif" style="width:50px; float: left;" id="map_loading"/>
+							</div>
+                            <div class="col-sm-4 col-xs-4 float-right">
                               <div class="btn-group btn-group-toggle float-right" data-toggle="buttons">
                                 <label class="btn btn-sm btn-primary btn-simple active" id="colInferno">
                                   <input type="radio" name="options" checked />
@@ -143,6 +148,7 @@ All data, software and library dependencies are used under their respective lice
                       <div class="card card-chart">
                         <div class="card-header" style="padding-top:10px;" >
                           <h5 class="card-category" id="stat_taxa_name">Relative abundance by City</h5>
+						  <img src="css/spinner.gif" style="width:50px; float: left;" id="stat_loading"/>
                         </div>
                         <div class="card-body h-100" style="padding-top:0px; padding-bottom:5px;">
                           <div class="chart-area" id="statDiv">
@@ -163,6 +169,7 @@ All data, software and library dependencies are used under their respective lice
                           <h5 class="card-category">Sample View</h5>
                         </div>
                         <div class="card-body">
+						  <img src="css/spinner.gif" style="width:50px; float:left; display:none;" id="sun_loading" />
                           <div class="" id="sampleDiv">
                           </div>
                         </div>
@@ -275,16 +282,26 @@ All data, software and library dependencies are used under their respective lice
           </div>
         </div>
         <footer class="footer">
-          <div class="container-fluid">
+          <div class="container-fluid" style="position:fixed;bottom:0px;background-color:#000000">
             <ul class="nav">
               <li class="nav-item">
-                <a href="https://www.biorxiv.org/content/10.1101/724526v1" target="_blank" class="nav-link">
-                Paper by Danko et al.
+                <a href="https://www.biorxiv.org/content/10.1101/724526v5" target="_blank" class="nav-link">
+                  Paper by Danko et al.
+                </a>
+              </li>
+			  <li class="nav-item">
+                <a href="https://pangeabio.io" target="_blank" class="nav-link">
+                  Powered by Pangea
                 </a>
               </li>
               <li class="nav-item">
                 <a href="http://metasub.org"  target="_blank" class="nav-link">
-                MetaSUB Consortium
+                  MetaSUB Consortium
+                </a>
+              </li>
+			  <li class="nav-item">
+                <a id="showHelp" href="#" class="nav-link">
+                  How to use
                 </a>
               </li>
             </ul>
@@ -303,9 +320,13 @@ All data, software and library dependencies are used under their respective lice
     <script src='js/plotly-latest.min.js'></script>
     <script src="js/typeahead.bundle.js"></script>
     <script src='js/d3.min.js'></script>
+	<script src="js/intro.min.js"></script>
+	<script src="js/mapboxgl-spiderifier.js"></script>
     <script src="js/metasub_helper.js"></script>
     <script src="js/metasub.js"></script>
     <script src="js/sunburst-chart.min.js"></script>
+	
+	
 
     <script src="assets/js/core/popper.min.js"></script>
     <script src="assets/js/core/bootstrap.min.js"></script>
@@ -316,6 +337,7 @@ All data, software and library dependencies are used under their respective lice
     <script src="assets/js/plugins/bootstrap-notify.js"></script>
     <!-- Control Center for Black Dashboard: parallax effects, scripts for the example pages etc -->
     <script src="assets/js/black-dashboard.min.js?v=1.0.0"></script>
+	
     
     <!-- Global site tag (gtag.js) - Google Analytics -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=UA-90109303-2"></script>

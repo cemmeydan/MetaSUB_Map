@@ -13,6 +13,14 @@ function DownloadJson(json_url)
     return json;
 }
 
+async function DownloadJsonAsync (json_url) 
+{
+	let response = await fetch(json_url);
+	let data = await response.json();  
+	return data;
+}
+
+
 function Quartile(data, q) 
 {
   data=Array_Sort_Numbers(data);
@@ -94,9 +102,12 @@ function convertHex(hex,opacity)
     return result;
 }
 
+var coordsList = {};
 
 function TaxaJsonToGeojson(taxaData)
 {
+	coordsList = {};
+	
 	curGeojson = {'type': "FeatureCollection", 
 		'features': taxaData.map((x,index) => 
 		{ return { 'type': "Feature", 
@@ -113,12 +124,80 @@ function TaxaJsonToGeojson(taxaData)
 								 'num_reads': x.sample_metadata.num_reads
 								 
 								 }, 
-				  'geometry': {'type': "Point", 'coordinates': [x.sample_metadata.longitude, x.sample_metadata.latitude] }
+				  'geometry': {'type': "Point", 'coordinates': FixCoordinates(x.sample_metadata) }
 				}
 			})
 	};
 	return curGeojson;
 }
+
+function FixCoordinates(metadata)
+{
+	var scale = 0.003;
+	var scaleY = 0.7;
+	curLon = metadata.longitude;
+	if (typeof curLon === 'undefined') curLon = metadata.city_longitude;
+	curLat = metadata.latitude;
+	if (typeof curLat === 'undefined') curLat = metadata.city_latitude;
+	
+	if( Math.abs(curLon - metadata.city_longitude) >= 1) curLon = metadata.city_longitude
+	if( Math.abs(curLat - metadata.city_latitude) >= 1) curLat = metadata.city_latitude
+	
+	
+	
+	var curKey = Math.round(curLon, 1e4) / 1e4 + "_" + Math.round(curLat, 1e4) / 1e4;
+	if( !( curKey in coordsList) )
+	{
+		coordsList[curKey] = {angle: 0, length: 1};
+	}else
+	{
+		curAngle = coordsList[curKey]['angle'];
+		curDist = Math.sqrt(coordsList[curKey]['length']);
+		curAngle += Math.asin(1/curDist);
+		coordsList[curKey] = {angle: curAngle, length: coordsList[curKey]['length'] + 1};
+		curShiftX = Math.cos(curAngle) * curDist * scale;
+		curShiftY = Math.sin(curAngle) * curDist * scale;
+		curLon = curLon + curShiftX;
+		curLat = curLat + curShiftY * scaleY;
+	}
+
+	
+	return [curLon, curLat];
+}
+
+
+
+
+function sortKeysByValue(dict)
+{
+	var items = Object.keys(dict).map(function(key) {
+	  return [key, dict[key]];
+	});
+
+	// Sort the array based on the second element
+	items.sort(function(first, second) {
+	  return second[1] - first[1];
+	});
+	
+	return items.map(x => x[0]);
+}
+
+function sortObject(obj) 
+{
+    items = Object.keys(obj).map(function(key) {
+        return [key, obj[key]];
+    });
+    items.sort(function(first, second) {
+        return second[1] - first[1];
+    });
+    sorted_obj={}
+    $.each(items, function(k, v) {
+        use_key = v[0]
+        use_value = v[1]
+        sorted_obj[use_key] = use_value
+    })
+    return(sorted_obj)
+} 
 
 // append row to the HTML table
 function appendRow() {
