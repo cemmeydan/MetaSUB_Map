@@ -24,8 +24,11 @@ All data, software and library dependencies are used under their respective lice
 - Sunburst by: Vasco Asturiano, https://github.com/vasturiano/sunburst-chart
 */
 
+
+var CACHE = true;
 var metadataApiUrl = "https://pangeabio.io/api/sample_groups/67e6b646-422e-4f61-9e9e-dac32caf23ba/metadata"
-var taxaApiUrl = "https://pangeabio.io/api/contrib/metasub/search_samples?format=json&query={TAXA}&metadata=true&all_samples=true"
+//var taxaApiUrl = "https://pangeabio.io/api/contrib/metasub/search_samples?format=json&query={TAXA}&metadata=true&all_samples=true"
+var taxaApiUrl = "https://pangeabio.io/api/contrib/metasub/search_samples?format=json&query={TAXA}&all_samples=true"
 var sampleApiUrl = "https://pangea.gimmebio.com/api/nested/MetaSUB%20Consortium/sample_groups/MetaSUB/samples/{SAMPLE}/analysis_results/krakenuniq_taxonomy/fields/relative_abundance?format=json"
 
 var sampleData = DownloadJson("data/testsample.json");
@@ -42,8 +45,12 @@ var colorList = colorListInferno;
 // TODO: encapsulate instead of global vars
 // TODO: Download files asynchronously and synchronize other initialization steps
 
+var metadata;
+if( CACHE )
+	metadata = DownloadJson("data/metadata.json"); 
+else 
+	metadata = DownloadJson(metadataApiUrl);
 
-//var cachedCgranulosum = DownloadJson("data/Cutibacterium_granulosum.json");
 var taxaList = DownloadJson("data/taxalist.json");
 var taxaListSpecies = taxaList.filter(function (x) { return x.rank == "species"});
 var cityList = DownloadJson("data/cities.json");
@@ -56,6 +63,8 @@ var cityToColorGroup = cityList.reduce(function(map, obj) {map[obj.city_id] = ob
 var taxaNameToTaxonomy = taxaList.reduce(function(map, obj) {map[obj.name] = obj.taxon;  return map;}, {});
 var taxaNameToTaxId = taxaList.reduce(function(map, obj) {map[obj.name] = obj.taxid;  return map;}, {});
 var cityIdToMetadata = cityList.reduce(function(map, obj) {map[obj.city_id] = obj;  return map;}, {});
+var cityIdToLat = cityList.reduce(function(map, obj) {map[obj.city_id] = obj.latitude;  return map;}, {});
+var cityIdToLon = cityList.reduce(function(map, obj) {map[obj.city_id] = obj.longitude;  return map;}, {});
 
 var togo_pdo = DownloadJson("data/togo_pdo.json");
 togo_pdo = togo_pdo.reduce(function(map, obj) {map[obj.species_taxid] = obj;  return map;}, {});
@@ -400,7 +409,7 @@ function PlotHeatmapTaxaMapbox(taxaData)
 	});
 	
 	// log-scaling
-	abVals = taxaData.taxa_data.map(x=> { return ConvertRelAb(x.relative_abundance); })
+	abVals = taxaData.taxa_data.map(x=> { return ConvertRelAb(x.relative_abundance  + 10**(-minAbShift-1)); })
 
 	// Percentile scaling for colors since data range is pretty wide even with log-scaling
 	var quantVals = [0, Quartile(abVals, 0.15), Quartile(abVals, 0.30), Quartile(abVals, 0.45), Quartile(abVals, 0.60), Quartile(abVals, 0.75), Quartile(abVals, 0.90), Quartile(abVals, 1)];
@@ -526,16 +535,16 @@ function PlotHeatmapTaxaMapbox(taxaData)
 			['linear'],
 			['zoom'],
 			0,
-			['case',['boolean', ['feature-state', 'hover'], false],	0,	3],
+			['case',['boolean', ['feature-state', 'hover'], false],	0,	2],
 			15,
-			['case',['boolean', ['feature-state', 'hover'], false],	0,	1]
+			['case',['boolean', ['feature-state', 'hover'], false],	0,	0.1]
 		  ],
 		  'circle-opacity': [
 			'interpolate',
 			['linear'],
 			['get', 'ab'],
 			0,
-			0.0001,
+			0.1,
 			10,
 			1
 		  ],
@@ -684,7 +693,16 @@ function ShowCityMetadata(geojson)
 function PlotBoxplot(taxaData)
 {
 	// Get data and sort by continent & city
-	boxData = taxaData.taxa_data.map(x => {return {ab:x.relative_abundance, city: x.sample_metadata.city, continent:cityToContinent[x.sample_metadata.city], colorGroup:cityToColorGroup[x.sample_metadata.city]} });
+	
+	var removeCities = ['control', 'pos_control', 'undefined', 'neg_control', 'other_control', 'newyork'];
+	boxData = taxaData.taxa_data.map(x => 
+	{
+		var curMetadata = metadata[x.sample_name];
+		if(removeCities.includes(curMetadata.city)) return null;
+		if(typeof curMetadata === 'undefined' || typeof curMetadata.city === 'undefined') return null;
+		return {ab:x.relative_abundance, city: curMetadata.city, continent:cityToContinent[curMetadata.city], colorGroup:cityToColorGroup[curMetadata.city]} 
+	});
+	boxData = boxData.filter( x => { if(x) return true; else return false;});
 	boxData = boxData.sort((a, b) => (a.colorGroup > b.colorGroup) ? 1 : (a.colorGroup === b.colorGroup) ? ( (a.city === b.city) ? 1 : -1 )  : -1);
 
 	// Setup city colors

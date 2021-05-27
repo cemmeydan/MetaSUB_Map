@@ -82,12 +82,12 @@ function unpack_metadata(rows, key)
 var minAbShift = 6;
 function ConvertRelAb(relAb)
 {
-	return Math.log10(relAb)+minAbShift;
+	return Math.log10(relAb + 10**(-minAbShift) ) + minAbShift;
 }
 
 function ConvertRelAbInverse(logAb)
 {
-	return 10**(logAb-minAbShift);
+	return 10**(logAb-minAbShift) - 10**(-minAbShift);
 }
 
 
@@ -107,24 +107,28 @@ var coordsList = {};
 function TaxaJsonToGeojson(taxaData)
 {
 	coordsList = {};
-	
 	curGeojson = {'type': "FeatureCollection", 
 		'features': taxaData.map((x,index) => 
-		{ return { 'type': "Feature", 
+		{ 
+			if(! x.sample_name in metadata)
+				return null;
+			
+			var curMetadata = metadata[x.sample_name];
+			return { 'type': "Feature", 
 				  'properties': {'ab': ConvertRelAb(x.relative_abundance), 
-								 'name': x.sample_metadata.metasub_name,
+								 'name': curMetadata.metasub_name,
 								 'sample_id': x.sample_name, 
 								 'sample_uuid': x.sample_uuid, 
-								 'city':x.sample_metadata.city,
-								 'line': x.sample_metadata.line,
-								 'location_type': x.sample_metadata.location_type,
-								 'project': x.sample_metadata.project,
-								 'surface': x.sample_metadata.surface,
-								 'surface_material': x.sample_metadata.surface_material,
-								 'num_reads': x.sample_metadata.num_reads
+								 'city':curMetadata.city,
+								 'line': curMetadata.line,
+								 'location_type': curMetadata.location_type,
+								 'project': curMetadata.project,
+								 'surface': curMetadata.surface,
+								 'surface_material': curMetadata.surface_material,
+								 'num_reads': curMetadata.num_reads
 								 
 								 }, 
-				  'geometry': {'type': "Point", 'coordinates': FixCoordinates(x.sample_metadata) }
+				  'geometry': {'type': "Point", 'coordinates': FixCoordinates(curMetadata) }
 				}
 			})
 	};
@@ -140,8 +144,8 @@ function FixCoordinates(metadata)
 	curLat = metadata.latitude;
 	if (typeof curLat === 'undefined') curLat = metadata.city_latitude;
 	
-	if( Math.abs(curLon - metadata.city_longitude) >= 1) curLon = metadata.city_longitude
-	if( Math.abs(curLat - metadata.city_latitude) >= 1) curLat = metadata.city_latitude
+	if( Math.abs(curLon - cityIdToLon[metadata.city]) >= 1) curLon = cityIdToLon[metadata.city]
+	if( Math.abs(curLat - cityIdToLat[metadata.city]) >= 1) curLat = cityIdToLat[metadata.city]
 	
 	
 	
